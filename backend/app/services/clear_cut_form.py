@@ -99,8 +99,14 @@ def add_clear_cut_form_entry(
     # Update report status when form is submitted
     report = db.get(ClearCutReport, report_id)
     if report is not None and report.status == "to_validate":
-        report.status = "validated" if editor.role == "admin" else "waiting_for_validation"
-    elif report is not None and report.status == "waiting_for_validation" and editor.role == "admin":
+        report.status = (
+            "validated" if editor.role == "admin" else "waiting_for_validation"
+        )
+    elif (
+        report is not None
+        and report.status == "waiting_for_validation"
+        and editor.role == "admin"
+    ):
         report.status = "validated"
 
     db.commit()

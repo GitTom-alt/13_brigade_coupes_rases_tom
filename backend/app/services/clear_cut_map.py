@@ -80,9 +80,8 @@ def query_clearcuts_filtered(db: Session, filters: Filters | None):
         .group_by(ClearCutReport.id)
         .subquery()
     )
-    reports = (
-        db.query(ClearCutReport)
-        .join(reports_with_rules, ClearCutReport.id == reports_with_rules.c.id)
+    reports = db.query(ClearCutReport).join(
+        reports_with_rules, ClearCutReport.id == reports_with_rules.c.id
     )
 
     if filters and filters.report_id is not None:

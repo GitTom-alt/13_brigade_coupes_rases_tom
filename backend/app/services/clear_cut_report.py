@@ -224,9 +224,10 @@ def volunteer_create_clear_cut_report(
     with status 'to_validate'. The volunteer is set as creator.
     Area is estimated from geometry using a simple spherical approximation.
     """
-    from shapely.geometry import shape
     import math
     from datetime import datetime as dt
+
+    from shapely.geometry import shape
 
     geom_type = polygon_geojson.get("type")
 
@@ -310,7 +311,7 @@ def update_clear_cut_report(
     report.user_id = user_id
     if user_id is not None:
         report.assignment_requested_by_id = None
-        
+
     if request.status is not None:
         if connected_user.role == "admin":
             report.status = request.status
@@ -327,12 +328,19 @@ def update_clear_cut_report(
 
 
 def find_clearcuts_reports(
-    db: Session, url: str, page: int = 0, size: int = 10, current_user: "User | None" = None, assigned_to_me: bool = False, admin_action_required: bool = False
+    db: Session,
+    url: str,
+    page: int = 0,
+    size: int = 10,
+    current_user: "User | None" = None,
+    assigned_to_me: bool = False,
+    admin_action_required: bool = False,
 ) -> PaginationResponseSchema[ClearCutReportResponseSchema]:
     from sqlalchemy.orm import joinedload
+
     query = db.query(ClearCutReport).options(
         joinedload(ClearCutReport.user),
-        joinedload(ClearCutReport.assignment_requested_by)
+        joinedload(ClearCutReport.assignment_requested_by),
     )
     if assigned_to_me and current_user:
         query = query.filter(ClearCutReport.user_id == current_user.id)
@@ -340,14 +348,16 @@ def find_clearcuts_reports(
         query = query.filter(
             or_(
                 ClearCutReport.status == "to_validate",
-                ClearCutReport.assignment_requested_by_id.is_not(None)
+                ClearCutReport.assignment_requested_by_id.is_not(None),
             )
         )
-        
+
     query = query.order_by(ClearCutReport.updated_at.desc())
     reports = query.offset(page * size).limit(size).all()
     reports_count = query.count()
-    reports_response = map(lambda r: report_to_response_schema(r, current_user), reports)
+    reports_response = map(
+        lambda r: report_to_response_schema(r, current_user), reports
+    )
     return PaginationResponseSchema(
         content=list(reports_response),
         metadata=PaginationMetadataSchema.create(
@@ -367,5 +377,7 @@ def get_report_by_id(db: Session, report_id: int) -> ClearCutReport:
     return report
 
 
-def get_report_response_by_id(id: int, db: Session, current_user: "User | None" = None) -> ClearCutReportResponseSchema:
+def get_report_response_by_id(
+    id: int, db: Session, current_user: "User | None" = None
+) -> ClearCutReportResponseSchema:
     return report_to_response_schema(get_report_by_id(db, id), current_user)

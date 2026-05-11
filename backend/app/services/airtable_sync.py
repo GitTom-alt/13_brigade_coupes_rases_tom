@@ -1,8 +1,8 @@
-import os
 import logging
+import os
+
 from pyairtable import Api
 from sqlalchemy.orm import Session
-from app.models import User, ClearCutReport
 
 logger = logging.getLogger(__name__)
 
@@ -10,6 +10,7 @@ AIRTABLE_API_KEY = os.getenv("AIRTABLE_API_KEY", "")
 AIRTABLE_BASE_ID = os.getenv("AIRTABLE_BASE_ID", "")
 AIRTABLE_USERS_TABLE = os.getenv("AIRTABLE_USERS_TABLE", "Utilisateurs")
 AIRTABLE_COUPES_TABLE = os.getenv("AIRTABLE_COUPES_TABLE", "Coupes")
+
 
 def sync_data_with_airtable(db: Session):
     if not AIRTABLE_API_KEY or not AIRTABLE_BASE_ID:
@@ -19,8 +20,8 @@ def sync_data_with_airtable(db: Session):
     logger.info("Starting Airtable synchronization...")
     try:
         api = Api(AIRTABLE_API_KEY)
-        users_table = api.table(AIRTABLE_BASE_ID, AIRTABLE_USERS_TABLE)
-        coupes_table = api.table(AIRTABLE_BASE_ID, AIRTABLE_COUPES_TABLE)
+        api.table(AIRTABLE_BASE_ID, AIRTABLE_USERS_TABLE)
+        api.table(AIRTABLE_BASE_ID, AIRTABLE_COUPES_TABLE)
 
         # 1. Sync Users from PostgreSQL to Airtable
         # 2. Pull validation status (is_active) from Airtable to PostgreSQL

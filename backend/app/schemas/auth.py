@@ -1,5 +1,6 @@
 from pydantic import BaseModel, EmailStr
 
+
 class RegisterSchema(BaseModel):
     first_name: str
     last_name: str
@@ -7,8 +8,10 @@ class RegisterSchema(BaseModel):
     login: str
     password: str
 
+
 class ForgotPasswordSchema(BaseModel):
     email: EmailStr
+
 
 class ResetPasswordSchema(BaseModel):
     token: str

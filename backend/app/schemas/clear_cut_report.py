@@ -1,12 +1,14 @@
-from datetime import datetime
 from logging import getLogger
 
 from pydantic import EmailStr, Field, field_validator
 
-from app.models import CLEARCUT_STATUSES, ClearCutReport
+from app.models import CLEARCUT_STATUSES, ClearCutReport, User
 from app.schemas.base import BaseSchema
 from app.schemas.clear_cut import ClearCutCreateSchema
-from app.schemas.clear_cut_map import ClearCutReportPreviewSchema, report_to_report_preview_schema
+from app.schemas.clear_cut_map import (
+    ClearCutReportPreviewSchema,
+    report_to_report_preview_schema,
+)
 
 logger = getLogger(__name__)
 
@@ -47,7 +49,9 @@ class ClearCutReportResponseSchema(ClearCutReportPreviewSchema):
     assignment_requested_by: PublicUserResponseSchema | None = None
 
 
-def report_to_response_schema(report: ClearCutReport, current_user: "User | None" = None) -> ClearCutReportResponseSchema:
+def report_to_response_schema(
+    report: ClearCutReport, current_user: "User | None" = None
+) -> ClearCutReportResponseSchema:
     """Build a full ClearCutReportResponseSchema from a ORM report instance.
 
     Delegates common fields to report_to_report_preview_schema, then adds the
