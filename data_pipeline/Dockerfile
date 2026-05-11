@@ -1,52 +1,47 @@
-# Use the base Python 3.11 slim image
-FROM python:3.11-slim
+# # # # # # # # # # # #
+# Image docker de run #
+# # # # # # # # # # # #
 
-# Update package lists and install GDAL, its dependencies, and Cron
+# Clever (and most CI) use the git repo root as Docker build context while
+# CC_DOCKERFILE points at this file — paths must be prefixed with data_pipeline/.
+FROM condaforge/miniforge3:latest
+
+WORKDIR /app/data_pipeline
+
+# Installe les dépendances système nécessaires pour GDAL et PostgreSQL
 RUN apt-get update && apt-get install -y \
-    gdal-bin \          # GDAL binary tools
-    libgdal-dev \       # GDAL development libraries
-    g++ \               # C++ compiler
-    cron \              # Cron service for scheduled tasks
-    && rm -rf /var/lib/apt/lists/*  # Clean up package lists
+    build-essential \
+    libpq-dev \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
 
-# Upgrade pip, setuptools, and wheel for better dependency management
-RUN pip install --upgrade pip setuptools wheel
+# Crée l'environnement conda avec Python 3.13 + GDAL en une seule passe
+# (deux appels conda séparés doublent le pic mémoire du solveur)
+ENV CONDA_ALWAYS_YES=true
+RUN mamba create -y -n py3_13 python=3.13 gdal -c conda-forge && \
+    mamba clean -afy
 
-# Install Poetry for managing project dependencies
-RUN pip install poetry
+# Installe Poetry dans py3_13 pour que les packages atterrissent dans le bon env
+RUN /opt/conda/envs/py3_13/bin/pip install poetry
+RUN /opt/conda/envs/py3_13/bin/poetry config virtualenvs.create false
 
-# Set the working directory in the container
-WORKDIR /app
+# Copie les fichiers de configuration Poetry (context = repo root)
+COPY data_pipeline/pyproject.toml data_pipeline/poetry.lock* ./
 
-# Copy pyproject.toml and poetry.lock to the container for dependency resolution
-COPY pyproject.toml poetry.lock* /app/
+# Installe les dépendances du projet dans py3_13
+RUN /opt/conda/envs/py3_13/bin/poetry install --no-interaction --no-ansi --no-root
 
-# Configure Poetry to not create a virtual environment (use the global Python environment)
-RUN poetry config virtualenvs.create false
+# Copie le code du sous-projet pipeline
+COPY data_pipeline/ ./
 
-# Install project dependencies using Poetry in non-interactive mode without ANSI output
-RUN poetry install --no-interaction --no-ansi
+# Installe le projet lui-même dans py3_13
+RUN /opt/conda/envs/py3_13/bin/poetry install --no-interaction --no-ansi --only-root
 
-# Install the specific version of pygdal that matches the installed GDAL version
-RUN pip install "pygdal==$(gdal-config --version).*"
+ENV PATH="/opt/conda/envs/py3_13/bin:${PATH}"
 
-# Copy all project files into the container
-COPY . /app
+# Force l'utilisation des bibliothèques conda (dont libstdc++ récent)
+ENV LD_LIBRARY_PATH=/opt/conda/envs/py3_13/lib
 
-# Make run.sh executable
-RUN chmod +x /app/run.sh
-
-# Schedule a cron job to run run.sh every minute and log its output
-RUN echo "* * * * * /app/run.sh >> /app/logs/cron.log 2>&1" > /etc/cron.d/data_pipeline
-
-# Set appropriate permissions for the cron file
-RUN chmod 0644 /etc/cron.d/data_pipeline
-
-# Create a directory for temporary data storage and set appropriate permissions
-RUN mkdir -p /app/data_temp && chmod -R a+rwx /app/data_temp
-
-# Apply the scheduled cron job
-RUN crontab /etc/cron.d/data_pipeline
-
-# Start the Cron service in the foreground to keep the container running
-CMD ["cron", "-f"]
+# Lance un serveur HTTP minimaliste sur 8080 (exigé par Clever Cloud)
+# en parallèle de la pipeline ; le container s'arrête quand la pipeline finit.
+CMD python -m pipeline.scripts.run_pipeline & python -m http.server 8080
