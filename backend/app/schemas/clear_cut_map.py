@@ -40,7 +40,7 @@ class ClearCutReportPreviewSchema(BaseSchema):
     rules_ids: list[str] = Field(
         json_schema_extra={"example": "[1,2,3]"},
     )
-    total_area_hectare: float = Field(
+    total_area_hectare: float | None = Field(
         json_schema_extra={"example": 10.0},
     )
     average_location: Point

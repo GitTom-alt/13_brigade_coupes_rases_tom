@@ -78,11 +78,6 @@ def report_to_response_schema(
                 login=report.user.login,
             )
         ),
-        assignment_requested_by_id=(
-            str(report.assignment_requested_by_id)
-            if report.assignment_requested_by_id
-            else None
-        ),
         assignment_requested_by=(
             None
             if report.assignment_requested_by_id is None or not show_user_info
